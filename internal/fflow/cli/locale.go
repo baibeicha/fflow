@@ -1,9 +1,10 @@
 package cli
 
 import (
-	"fflow/internal/fflow/locale"
-	"fflow/internal/fflow/ui"
 	"fmt"
+
+	"github.com/baibeicha/fflow/internal/fflow/locale"
+	"github.com/baibeicha/fflow/internal/fflow/ui"
 
 	"github.com/spf13/cobra"
 )

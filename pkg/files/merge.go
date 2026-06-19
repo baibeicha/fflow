@@ -2,12 +2,13 @@ package files
 
 import (
 	"bufio"
-	"fflow/pkg/files/countingwriter"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/baibeicha/fflow/pkg/files/countingwriter"
 )
 
 // MergeFiles merges the given slice of files and returns statistics

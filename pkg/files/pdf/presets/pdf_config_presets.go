@@ -3,7 +3,7 @@
 // Always call the Clone() method before modifying a preset to prevent mutating the global variables.
 package presets
 
-import "fflow/pkg/files/pdf"
+import "github.com/baibeicha/fflow/pkg/files/pdf"
 
 // PresetBundle groups configuration presets by localization.
 type PresetBundle struct {

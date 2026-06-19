@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"fflow/pkg/files"
+	"github.com/baibeicha/fflow/pkg/files"
 
 	"github.com/go-pdf/fpdf"
 )

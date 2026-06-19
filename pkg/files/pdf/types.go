@@ -1,10 +1,11 @@
 package pdf
 
 import (
-	"fflow/pkg/files"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/baibeicha/fflow/pkg/files"
 )
 
 type FileCategory byte

@@ -11,9 +11,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"fflow/internal/fflow/locale"
-	"fflow/internal/fflow/ui"
-	"fflow/pkg/files"
+	"github.com/baibeicha/fflow/internal/fflow/locale"
+	"github.com/baibeicha/fflow/internal/fflow/ui"
+	"github.com/baibeicha/fflow/pkg/files"
 )
 
 var (

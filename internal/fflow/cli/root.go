@@ -1,11 +1,12 @@
 package cli
 
 import (
-	"fflow/internal/fflow/locale"
-	"fflow/internal/fflow/ui"
-	"fflow/pkg/config"
 	"fmt"
 	"os"
+
+	"github.com/baibeicha/fflow/internal/fflow/locale"
+	"github.com/baibeicha/fflow/internal/fflow/ui"
+	"github.com/baibeicha/fflow/pkg/config"
 
 	"github.com/spf13/cobra"
 )

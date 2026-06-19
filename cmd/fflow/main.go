@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fflow/internal/fflow/cli"
-	"fflow/pkg/logger"
 	"log"
 	"os"
+
+	"github.com/baibeicha/fflow/internal/fflow/cli"
+	"github.com/baibeicha/fflow/pkg/logger"
 )
 
 func main() {
