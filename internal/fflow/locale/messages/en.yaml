@@ -1,0 +1,183 @@
+cli:
+  name: "fflow"
+  description: "Utility for working with files and documents"
+  long: |
+    fflow - a powerful utility for working with files and documents via pipelines
+    
+    Available commands:
+      flow    - Pipeline processing of files
+      stats   - Collect file statistics
+      info    - Detailed directory information
+      merge   - Merge multiple files into one
+      pdf     - Generate PDF from files
+      copy    - Copy files based on filters
+      move    - Move files based on filters
+      delete  - Delete selected files
+      rename  - Batch rename files
+      ext     - Batch change file extensions
+      zip     - Create a ZIP archive from files
+      cmd     - Execute shell scripts on files
+      locale  - Set interface language
+    
+    Use "fflow [command] --help" for more information about a command.
+
+cobra:
+  usage: "Usage"
+  available_commands: "Available Commands"
+  flags: "Flags"
+  global_flags: "Global Flags"
+  help_info: 'Use "fflow [command] --help" for more information about a command.'
+
+commands:
+  help:
+    short: "Help about any command"
+    long: "Displays help information about any specified command."
+  flow:
+    short: "Pipeline processing of files"
+    long: "Passes filtered files through a chain of actions (copy, move, zip, rename) with state mutation. Can read from YAML or inline --cmd argument."
+  stats:
+    short: "Collect file statistics"
+    long: "Collects information about the number of lines, words, characters and bytes in files."
+  info:
+    short: "Displays detailed information about a directory"
+    long: "Collects a list of all files in the directory, outputs metadata, and calculates overall statistics."
+  merge:
+    short: "Merge files into one"
+    long: "Merges multiple files into one with the ability to add headers and separators."
+  pdf:
+    short: "Generate PDF from files"
+    long: "Generates a single PDF document from various files with formatting support."
+  copy:
+    short: "Copies files"
+    long: "Searches for files using filters and safely copies them to target directories."
+  move:
+    short: "Moves files"
+    long: "Searches for files using filters and moves them to target directories."
+  delete:
+    short: "Delete files"
+    long: "Deletes files and directories matching the specified search filters."
+  rename:
+    short: "Rename files"
+    long: "Batch renames files using search, replace, prefixes, and suffixes."
+  ext:
+    short: "Change file extensions"
+    long: "Batch changes the extension of filtered files to the specified one."
+  zip:
+    short: "Create ZIP archive"
+    long: "Collects filtered files into a single ZIP archive, preserving structure."
+  cmd:
+    short: "Execute shell script"
+    long: "Executes a system command for each matched file. Use {} to inject the file path."
+  locale:
+    short: "Set interface language"
+    long: "Change interface language for the CLI (supported: en, ru)."
+
+flags:
+  path: "Path to directory or file (-p)"
+  output: "Path to output file (-o)"
+  dest: "Target directory (where to copy/move) (-d)"
+  rewrite: "Overwrite existing files (-w)"
+  recursive: "Recursive directory traversal (-r)"
+  extensions: "Filter by extensions (comma-separated) (-e)"
+  blacklist: "Ignore paths containing these substrings"
+  min_size: "Minimum file size (e.g., 1kb, 10mb)"
+  max_size: "Maximum file size (e.g., 5mb, 1gb)"
+  sort_by: "Sort by (available: name, size, modtime; asc, desc)"
+  config: "Path to config file"
+  verbose: "Verbose logging output (-v)"
+  quiet: "Quiet mode (-q)"
+  search: "Substring to search for in the filename"
+  replace: "String to replace the found substring with"
+  prefix: "Add a prefix to the filename"
+  suffix: "Add a suffix to the filename (before the extension)"
+  to: "New extension (e.g., .md)"
+  exec: "Command template (e.g., 'echo {}')"
+  flow_file: "Path to YAML script file (-f)"
+  flow_cmd: "Inline script string separated by ';' (-c)"
+  flow_env: "Load OS environment variables into script context"
+  preset: "Configuration preset"
+  language: "Language (en, ru)"
+  categories: "Filter by categories (image, text, table, code, all)"
+  fast: "Fast processing mode (-f)"
+  include_path: "Include absolute file path"
+  include_name: "Include file name"
+  separator: "Separator between files"
+  count_lines: "Count lines"
+  count_words: "Count words"
+  count_chars: "Count characters"
+  count_chars_no_space: "Count characters without spaces"
+
+messages:
+  progress:
+    analyzing_dir: "Analyzing directory: %s"
+    collecting: "Collecting files..."
+    counting: "Counting statistics..."
+    merging: "Merging files (%s mode)..."
+    generating_pdf: "Generating PDF..."
+    copying: "Copying files..."
+    moving: "Moving files..."
+    deleting: "Deleting files..."
+    renaming: "Renaming files..."
+    zipping: "Creating archive..."
+    executing: "Executing commands..."
+    flow_step: "[Flow] Step: %s..."
+
+  labels:
+    file_name: "FILE NAME"
+    size: "SIZE"
+    modified_time: "MODIFIED DATE"
+    relative_path: "RELATIVE PATH"
+    copy_suffix: "Copy"
+    files: "Files"
+    lines: "Lines"
+    words: "Words"
+    characters: "Characters"
+    characters_no_space: "Characters (without spaces)"
+    bytes: "Size"
+    elapsed: "Execution Time"
+    output_file: "Output file"
+    mode: "Mode"
+    mode_fast: "fast"
+    mode_full: "full"
+    preset: "Preset"
+    language: "Language"
+    orientation: "Orientation"
+    page_size: "Page size"
+
+  results:
+    file_list: "Directory File List"
+    dir_stats: "Overall Directory Statistics"
+    copy_title: "Copy Results"
+    move_title: "Move Results"
+    merge_title: "Merge Results"
+    pdf_title: "PDF Generation Results"
+    stats_title: "Statistics Results"
+
+  errors:
+    resolving_path: "Failed to resolve absolute path: %v"
+    path_not_exists: "The specified path '%s' does not exist"
+    path_access: "Error accessing path '%s': %v"
+    path_is_file: "The specified path '%s' is a file, a directory is expected"
+    collecting_files: "Error collecting file list: %v"
+    merging_files: "Error merging files: %v"
+    generating_pdf: "Error generating PDF: %v"
+    unknown_preset: "Unknown preset: %s"
+    invalid_preset_type: "Invalid preset type"
+    no_files_found: "No files found for the given search criteria"
+    invalid_locale: "Invalid locale. Supported: en, ru"
+    flow_no_pipeline: "You must specify a pipeline script via --file or --cmd"
+
+  success:
+    info_collected: "Information collection completed successfully!"
+    files_copied: "Files copied successfully!"
+    files_moved: "Files moved successfully!"
+    files_deleted: "Files deleted successfully!"
+    files_renamed: "Files renamed successfully!"
+    archive_created: "Archive created successfully!"
+    cmd_executed: "Commands executed successfully!"
+    stats_collected: "Statistics successfully collected!"
+    files_found: "Successfully found files: %d"
+    locale_changed: "Interface language successfully changed to %s!"
+    pdf_generated: "PDF document generated successfully!"
+    files_merged: "Files successfully merged into %s!"
+    flow_completed: "Flow pipeline completed successfully!"
