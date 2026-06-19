@@ -49,7 +49,7 @@
 Requires **Go 1.21** or higher.
 
 ```bash
-git clone https://github.com/yourusername/fflow.git
+git clone https://github.com/baibeicha/fflow.git
 cd fflow
 go build -o fflow ./cmd/fflow
 # Move to your PATH (Linux/macOS)
@@ -58,7 +58,7 @@ sudo mv fflow /usr/local/bin/
 
 ### Go Install
 ```bash
-go install github.com/yourusername/fflow/cmd/fflow@latest
+go install github.com/baibeicha/fflow/cmd/fflow@latest
 ```
 
 ---
