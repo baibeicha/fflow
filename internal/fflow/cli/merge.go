@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -57,7 +58,14 @@ func init() {
 	mergeCmd.Flags().BoolVar(&mergeCountNoSpc, "count-chars-no-space", false, locale.T("flags.count_chars_no_space"))
 }
 
-func runMerge(cmd *cobra.Command, args []string) error {
+func runMerge(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("merge", recordedFiles, recordedBytes, start, err)
+	}()
+
 	ui.Title(locale.T("commands.merge.short"))
 
 	fsc := files.NewFolderSearchConfig(mergeRecursive, mergePaths...)
@@ -96,7 +104,7 @@ func runMerge(cmd *cobra.Command, args []string) error {
 		mode = locale.T("messages.labels.mode_fast")
 	}
 
-	startTime := time.Now()
+	start = time.Now()
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	fileInfos, err := files.CollectFiles(fsc)
@@ -129,9 +137,12 @@ func runMerge(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	recordedFiles = stats.Files
+	recordedBytes = stats.Bytes
+
 	ui.Success(fmt.Sprintf(locale.T("messages.success.files_found"), stats.Files))
 
-	elapsed := time.Since(startTime)
+	elapsed := time.Since(start)
 	printMergeResult(stats, elapsed)
 
 	return nil

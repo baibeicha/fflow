@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -49,7 +50,14 @@ func init() {
 	statsCmd.Flags().StringSliceVar(&statsSortBy, "sort-by", []string{"name:asc"}, locale.T("flags.sort_by"))
 }
 
-func runStats(cmd *cobra.Command, args []string) error {
+func runStats(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("stats", recordedFiles, recordedBytes, start, err)
+	}()
+
 	ui.Title(locale.T("commands.stats.short"))
 
 	fsc := files.NewFolderSearchConfig(statsRecursive, statsPaths...)
@@ -80,7 +88,7 @@ func runStats(cmd *cobra.Command, args []string) error {
 
 	sorter := buildSorter(statsSortBy)
 
-	startTime := time.Now()
+	start = time.Now()
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	fileInfos, err := files.CollectFiles(fsc)
@@ -113,9 +121,12 @@ func runStats(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	recordedFiles = stats.Files
+	recordedBytes = stats.Bytes
+
 	ui.Success(fmt.Sprintf(locale.T("messages.success.files_found"), stats.Files))
 
-	elapsed := time.Since(startTime)
+	elapsed := time.Since(start)
 	printStatsResult(stats, elapsed)
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -36,7 +37,14 @@ func init() {
 	extCmd.MarkFlagRequired("to")
 }
 
-func runExt(cmd *cobra.Command, args []string) error {
+func runExt(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("ext", recordedFiles, recordedBytes, start, err)
+	}()
+
 	paths := extPaths
 	if len(args) > 0 {
 		paths = args
@@ -51,6 +59,8 @@ func runExt(cmd *cobra.Command, args []string) error {
 	}
 	fsc.CollectDirs = false
 
+	start = time.Now()
+
 	ui.Title(locale.T("commands.ext.short"))
 	items, err := files.CollectFiles(fsc)
 	if err != nil {
@@ -61,7 +71,6 @@ func runExt(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	start := time.Now()
 	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.renaming"))
 
 	_, stats, err := files.ChangeExtension(items, extTo, func() { bar.Add(1) })
@@ -70,10 +79,16 @@ func runExt(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	recordedFiles = stats.Files
+	recordedBytes = stats.Bytes
+
 	ui.PrintStatsTable(map[string]string{
 		locale.T("messages.labels.files"):   ui.FormatNumber(stats.Files),
 		locale.T("messages.labels.elapsed"): time.Since(start).Round(time.Millisecond).String(),
 	})
+
 	ui.Success(locale.T("messages.success.files_renamed"))
+
 	return nil
 }

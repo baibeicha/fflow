@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -48,7 +49,14 @@ func init() {
 	infoCmd.Flags().StringSliceVar(&infoSortBy, "sort-by", []string{"name:asc"}, locale.T("flags.sort_by"))
 }
 
-func runInfo(cmd *cobra.Command, args []string) error {
+func runInfo(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("info", recordedFiles, recordedBytes, start, err)
+	}()
+
 	pathsToAnalyze := infoPaths
 	if len(args) > 0 {
 		pathsToAnalyze = args

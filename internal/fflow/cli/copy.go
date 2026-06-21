@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -45,7 +46,14 @@ func init() {
 	copyCmd.Flags().StringVar(&copyMaxSize, "max-size", "", locale.T("flags.max_size"))
 }
 
-func runCopy(cmd *cobra.Command, args []string) error {
+func runCopy(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("copy", recordedFiles, recordedBytes, start, err)
+	}()
+
 	pathsToSearch := copyPaths
 	if len(args) > 0 {
 		pathsToSearch = args
@@ -82,7 +90,7 @@ func runCopy(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	startTime := time.Now()
+	start = time.Now()
 	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.copying"))
 	suffix := locale.T("messages.labels.copy_suffix")
 
@@ -95,14 +103,21 @@ func runCopy(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("передача завершилась с ошибкой: %w", err)
 	}
 
-	elapsed := time.Since(startTime)
+	recordedFiles = stats.Files
+	recordedBytes = stats.Bytes
+
+	elapsed := time.Since(start)
+
 	ui.PrintSection(locale.T("messages.results.copy_title"))
+
 	data := map[string]string{
 		locale.T("messages.labels.files"):   ui.FormatNumber(stats.Files),
 		locale.T("messages.labels.bytes"):   ui.FormatBytes(stats.Bytes),
 		locale.T("messages.labels.elapsed"): elapsed.Round(time.Millisecond).String(),
 	}
 	ui.PrintStatsTable(data)
+
 	ui.Success(locale.T("messages.success.files_copied"))
+
 	return nil
 }

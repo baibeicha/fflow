@@ -71,6 +71,16 @@ commands:
   locale:
     short: "Set interface language"
     long: "Change interface language for the CLI (supported: en, ru)."
+  telemetry:
+    short: "Manage metrics collection and pushing"
+    long: "Allows you to enable/disable anonymous telemetry collection or push data manually."
+    telemetry_on:
+      short: "Enable anonymous telemetry collection"
+    telemetry_off:
+      short: "Disable telemetry collection"
+    telemetry_push:
+      short: "Push collected metrics to the server"
+
 
 flags:
   path: "Path to directory or file (-p)"
@@ -106,6 +116,7 @@ flags:
   count_words: "Count words"
   count_chars: "Count characters"
   count_chars_no_space: "Count characters without spaces"
+  endpoint: "Server URL to send metrics to (-e)"
 
 messages:
   progress:
@@ -121,6 +132,7 @@ messages:
     zipping: "Creating archive..."
     executing: "Executing commands..."
     flow_step: "[Flow] Step: %s..."
+    pushing_telemetry: "Sending metrics to server..."
 
   labels:
     file_name: "FILE NAME"
@@ -166,6 +178,7 @@ messages:
     no_files_found: "No files found for the given search criteria"
     invalid_locale: "Invalid locale. Supported: en, ru"
     flow_no_pipeline: "You must specify a pipeline script via --file or --cmd"
+    telemetry_no_endpoint: "Endpoint not specified. Use the --endpoint flag on your first push."
 
   success:
     info_collected: "Information collection completed successfully!"
@@ -181,3 +194,9 @@ messages:
     pdf_generated: "PDF document generated successfully!"
     files_merged: "Files successfully merged into %s!"
     flow_completed: "Flow pipeline completed successfully!"
+    telemetry_on: "Telemetry enabled! Thank you for your support."
+    telemetry_off: "Telemetry collection successfully disabled."
+    telemetry_pushed: "Metrics pushed successfully!"
+
+  prompts:
+    telemetry: "Allow fflow to collect anonymous usage metrics to improve the tool? (y/N): "

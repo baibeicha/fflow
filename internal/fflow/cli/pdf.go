@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -111,7 +112,14 @@ func init() {
 	pdfCmd.Flags().StringVar(&pdfCodeTextColor, "code-text-color", "", locale.T("flags.code_text_color"))
 }
 
-func runPDF(cmd *cobra.Command, args []string) error {
+func runPDF(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("pdf", recordedFiles, recordedBytes, start, err)
+	}()
+
 	ui.Title(locale.T("commands.pdf.short"))
 
 	presetCfg, err := getPreset(pdfPreset, pdfLang)
@@ -151,7 +159,7 @@ func runPDF(cmd *cobra.Command, args []string) error {
 
 	sorter := buildSorter(pdfSortBy)
 
-	startTime := time.Now()
+	start = time.Now()
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	fileInfos, err := files.CollectFiles(fsc)
@@ -179,7 +187,9 @@ func runPDF(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf(locale.T("messages.errors.generating_pdf"), err)
 	}
 
-	elapsed := time.Since(startTime)
+	recordedFiles = int64(len(fileInfos))
+
+	elapsed := time.Since(start)
 	printPDFResult(presetCfg, elapsed)
 
 	return nil

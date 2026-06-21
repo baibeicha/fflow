@@ -1,13 +1,15 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
 	"github.com/baibeicha/fflow/internal/fflow/ui"
 	"github.com/baibeicha/fflow/pkg/config"
-
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -15,8 +17,7 @@ var (
 	cfgFile string
 	verbose bool
 	quiet   bool
-
-	appCfg *config.Config
+	appCfg  *config.Config
 )
 
 var rootCmd = &cobra.Command{
@@ -24,12 +25,51 @@ var rootCmd = &cobra.Command{
 	Short: "fflow",
 	Long:  "fflow",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return initConfig()
+		checkTelemetryPrompt(cmd)
+		return nil
 	},
 }
 
+// Execute starts the application CLI.
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+func checkTelemetryPrompt(cmd *cobra.Command) {
+	if cmd.Name() == "help" || cmd.Name() == "completion" || cmd.Name() == "telemetry" ||
+		(cmd.Parent() != nil && cmd.Parent().Name() == "telemetry") {
+		return
+	}
+
+	state := telemetry.LoadState()
+	if state.HasPrompted {
+		return
+	}
+
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		state.Enabled = false
+		state.HasPrompted = true
+		telemetry.SaveState(state)
+		return
+	}
+
+	fmt.Print(locale.T("messages.prompts.telemetry"))
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(strings.ToLower(input))
+
+	if input == "y" || input == "yes" || input == "д" || input == "да" {
+		state.Enabled = true
+		fmt.Println(locale.T("messages.success.telemetry_on"))
+	} else {
+		state.Enabled = false
+		fmt.Println(locale.T("messages.success.telemetry_off"))
+	}
+
+	state.HasPrompted = true
+	telemetry.SaveState(state)
+	fmt.Println()
 }
 
 func init() {
@@ -56,11 +96,11 @@ func init() {
 	rootCmd.AddCommand(zipCmd)
 	rootCmd.AddCommand(cmdExecCmd)
 	rootCmd.AddCommand(flowCmd)
+	rootCmd.AddCommand(telemetryCmd)
 
 	ui.Init(quiet, verbose)
 
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
-
 	rootCmd.InitDefaultHelpCmd()
 	for _, c := range rootCmd.Commands() {
 		if c.Name() == "help" {
@@ -90,25 +130,4 @@ func init() {
 		locale.T("cobra.help_info"),
 	)
 	rootCmd.SetUsageTemplate(usageTmpl)
-}
-
-func initConfig() error {
-	if cfgFile != "" {
-		appCfg = config.MustLoad(cfgFile)
-	} else {
-		appCfg = config.MustLoadUserConfig("fflow",
-			"locale", "en",
-		)
-	}
-
-	if verbose {
-		ui.Info(locale.T("messages.success.config_loaded"))
-	}
-
-	return nil
-}
-
-func exitWithError(format string, args ...interface{}) {
-	ui.Error(fmt.Sprintf(format, args...))
-	os.Exit(1)
 }

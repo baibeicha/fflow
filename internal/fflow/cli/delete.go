@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -37,7 +38,14 @@ func init() {
 	deleteCmd.Flags().StringVar(&delMaxSize, "max-size", "", locale.T("flags.max_size"))
 }
 
-func runDelete(cmd *cobra.Command, args []string) error {
+func runDelete(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("delete", recordedFiles, recordedBytes, start, err)
+	}()
+
 	paths := delPaths
 	if len(args) > 0 {
 		paths = args
@@ -60,6 +68,8 @@ func runDelete(cmd *cobra.Command, args []string) error {
 	}
 	fsc.CollectDirs = false
 
+	start = time.Now()
+
 	ui.Title(locale.T("commands.delete.short"))
 	items, err := files.CollectFiles(fsc)
 	if err != nil {
@@ -70,7 +80,6 @@ func runDelete(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	start := time.Now()
 	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.deleting"))
 
 	_, stats, err := files.DeleteFiles(items, func() { bar.Add(1) })
@@ -79,11 +88,17 @@ func runDelete(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	recordedFiles = stats.Files
+	recordedBytes = stats.Bytes
+
 	ui.PrintStatsTable(map[string]string{
 		locale.T("messages.labels.files"):   ui.FormatNumber(stats.Files),
 		locale.T("messages.labels.bytes"):   ui.FormatBytes(stats.Bytes),
 		locale.T("messages.labels.elapsed"): time.Since(start).Round(time.Millisecond).String(),
 	})
+
 	ui.Success(locale.T("messages.success.files_deleted"))
+
 	return nil
 }

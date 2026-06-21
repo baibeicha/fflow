@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -45,7 +46,14 @@ func init() {
 	moveCmd.Flags().StringVar(&moveMaxSize, "max-size", "", locale.T("flags.max_size"))
 }
 
-func runMove(cmd *cobra.Command, args []string) error {
+func runMove(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("move", recordedFiles, recordedBytes, start, err)
+	}()
+
 	pathsToSearch := movePaths
 	if len(args) > 0 {
 		pathsToSearch = args
@@ -82,7 +90,7 @@ func runMove(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	startTime := time.Now()
+	start = time.Now()
 	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.moving"))
 	suffix := locale.T("messages.labels.copy_suffix")
 
@@ -92,10 +100,10 @@ func runMove(cmd *cobra.Command, args []string) error {
 	bar.Finish()
 
 	if err != nil {
-		return fmt.Errorf("перемещение завершилось с ошибкой: %w", err)
+		return fmt.Errorf("moving error: %w", err)
 	}
 
-	elapsed := time.Since(startTime)
+	elapsed := time.Since(start)
 	ui.PrintSection(locale.T("messages.results.move_title"))
 	data := map[string]string{
 		locale.T("messages.labels.files"):   ui.FormatNumber(stats.Files),
@@ -103,6 +111,8 @@ func runMove(cmd *cobra.Command, args []string) error {
 		locale.T("messages.labels.elapsed"): elapsed.Round(time.Millisecond).String(),
 	}
 	ui.PrintStatsTable(data)
+
 	ui.Success(locale.T("messages.success.files_moved"))
+
 	return nil
 }

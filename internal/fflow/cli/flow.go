@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -47,7 +48,15 @@ func init() {
 	flowCmd.Flags().BoolVar(&flowLoadEnv, "env", false, locale.T("flags.flow_env"))
 }
 
-func runFlow(cmd *cobra.Command, args []string) error {
+func runFlow(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("flow", recordedFiles, recordedBytes, start, err)
+	}()
+
 	if flowYamlFile == "" && flowInlineCmd == "" {
 		return fmt.Errorf(locale.T("messages.errors.flow_no_pipeline"))
 	}
@@ -70,6 +79,8 @@ func runFlow(cmd *cobra.Command, args []string) error {
 		fsc.SetMaxSize(files.SizeFromUnit(s, u))
 	}
 	fsc.CollectDirs = false
+
+	start = time.Now()
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	items, err := files.CollectFiles(fsc)
@@ -111,7 +122,6 @@ func runFlow(cmd *cobra.Command, args []string) error {
 		Vars:  make(map[string]string),
 	}
 
-	start := time.Now()
 	var currentBar *ui.ProgressBar
 	var lastAction string
 
@@ -137,6 +147,9 @@ func runFlow(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("flow failed: %w", err)
 	}
+
+	recordedFiles = ctx.Stats.Files
+	recordedBytes = ctx.Stats.Bytes
 
 	ui.PrintStatsTable(map[string]string{
 		locale.T("messages.labels.files"):   ui.FormatNumber(ctx.Stats.Files),

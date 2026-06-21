@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -35,7 +36,14 @@ func init() {
 	zipCmd.Flags().StringVarP(&zipOutput, "output", "o", "archive.zip", locale.T("flags.output"))
 }
 
-func runZip(cmd *cobra.Command, args []string) error {
+func runZip(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("zip", recordedFiles, recordedBytes, start, err)
+	}()
+
 	paths := zipPaths
 	if len(args) > 0 {
 		paths = args
@@ -50,6 +58,8 @@ func runZip(cmd *cobra.Command, args []string) error {
 	}
 	fsc.CollectDirs = false
 
+	start = time.Now()
+
 	ui.Title(locale.T("commands.zip.short"))
 	items, err := files.CollectFiles(fsc)
 	if err != nil {
@@ -60,7 +70,6 @@ func runZip(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	start := time.Now()
 	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.zipping"))
 
 	_, stats, err := files.CreateZip(items, zipOutput, func() { bar.Add(1) })
@@ -69,11 +78,17 @@ func runZip(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	recordedFiles = stats.Files
+	recordedBytes = stats.Bytes
+
 	ui.PrintStatsTable(map[string]string{
 		locale.T("messages.labels.files"):   ui.FormatNumber(stats.Files),
 		locale.T("messages.labels.bytes"):   ui.FormatBytes(stats.Bytes),
 		locale.T("messages.labels.elapsed"): time.Since(start).Round(time.Millisecond).String(),
 	})
+
 	ui.Success(locale.T("messages.success.archive_created"))
+
 	return nil
 }

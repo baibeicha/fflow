@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/baibeicha/fflow/pkg/telemetry"
 	"github.com/spf13/cobra"
 
 	"github.com/baibeicha/fflow/internal/fflow/locale"
@@ -41,7 +42,14 @@ func init() {
 	renameCmd.Flags().StringVar(&renSuffix, "suffix", "", locale.T("flags.suffix"))
 }
 
-func runRename(cmd *cobra.Command, args []string) error {
+func runRename(cmd *cobra.Command, args []string) (err error) {
+	start := time.Now()
+	var recordedFiles, recordedBytes int64
+
+	defer func() {
+		telemetry.Record("rename", recordedFiles, recordedBytes, start, err)
+	}()
+
 	paths := renPaths
 	if len(args) > 0 {
 		paths = args
@@ -66,7 +74,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	start := time.Now()
+	start = time.Now()
 	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.renaming"))
 
 	_, stats, err := files.RenameFiles(items, renSearch, renReplace, renPrefix, renSuffix, func() { bar.Add(1) })
@@ -75,10 +83,16 @@ func runRename(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	recordedFiles = stats.Files
+	recordedBytes = stats.Bytes
+
 	ui.PrintStatsTable(map[string]string{
 		locale.T("messages.labels.files"):   ui.FormatNumber(stats.Files),
 		locale.T("messages.labels.elapsed"): time.Since(start).Round(time.Millisecond).String(),
 	})
+
 	ui.Success(locale.T("messages.success.files_renamed"))
+
 	return nil
 }

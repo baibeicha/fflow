@@ -18,7 +18,7 @@ var localeCmd = &cobra.Command{
 	RunE:    runLocale,
 }
 
-func runLocale(cmd *cobra.Command, args []string) error {
+func runLocale(cmd *cobra.Command, args []string) (err error) {
 	newLocale := args[0]
 
 	if err := locale.SaveLocale(newLocale); err != nil {
