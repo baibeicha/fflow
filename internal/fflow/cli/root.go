@@ -59,12 +59,19 @@ func checkTelemetryPrompt(cmd *cobra.Command) {
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(strings.ToLower(input))
 
-	if input == "y" || input == "yes" || input == "д" || input == "да" {
+	yesMap := map[string]struct{}{
+		"yes": {},
+		"y":   {},
+		"Y":   {},
+		"да":  {},
+		"Д":   {},
+		"д":   {},
+	}
+
+	if _, ok := yesMap[input]; !ok {
 		state.Enabled = true
-		fmt.Println(locale.T("messages.success.telemetry_on"))
 	} else {
 		state.Enabled = false
-		fmt.Println(locale.T("messages.success.telemetry_off"))
 	}
 
 	state.HasPrompted = true

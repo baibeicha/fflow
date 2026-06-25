@@ -35,6 +35,7 @@ type Messages struct {
 		Progress map[string]string `yaml:"progress"`
 		Labels   map[string]string `yaml:"labels"`
 		Results  map[string]string `yaml:"results"`
+		Prompts  map[string]string `yaml:"prompts"`
 	} `yaml:"messages"`
 }
 
@@ -226,6 +227,10 @@ func getNestedValue(parts []string, msgs *Messages) string {
 			}
 		case "results":
 			if val, ok := msgs.Messages.Results[parts[2]]; ok {
+				return val
+			}
+		case "prompts":
+			if val, ok := msgs.Messages.Prompts[parts[2]]; ok {
 				return val
 			}
 		}
