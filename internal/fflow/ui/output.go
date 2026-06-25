@@ -81,7 +81,7 @@ func PrintStatsTable(data map[string]string) {
 }
 
 func FormatBytes(bytes int64) string {
-	return humanize.Bytes(uint64(bytes))
+	return humanize.IBytes(uint64(bytes))
 }
 
 func FormatNumber(n int64) string {
