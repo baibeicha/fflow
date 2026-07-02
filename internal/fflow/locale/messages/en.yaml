@@ -117,6 +117,8 @@ flags:
   count_chars: "Count characters"
   count_chars_no_space: "Count characters without spaces"
   endpoint: "Server URL to send metrics to (-e)"
+  limit: "Maximum number of files"
+  offset: "How many files to skip from the start"
 
 messages:
   progress:

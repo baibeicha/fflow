@@ -21,6 +21,8 @@ type FolderSearchConfig struct {
 	ValidExtensions map[string]bool
 	BlackList       map[string]struct{}
 	CollectDirs     bool
+	Limit           *uint64
+	Offset          *uint64
 }
 
 // FlowContext holds the state of the pipeline execution and mutates between steps.
@@ -104,6 +106,14 @@ func (fs *FolderSearchConfig) SetMinSize(size int64) {
 
 func (fs *FolderSearchConfig) SetMaxSize(size int64) {
 	fs.MaxSize = &size
+}
+
+func (fs *FolderSearchConfig) SetLimit(limit uint64) {
+	fs.Limit = &limit
+}
+
+func (fs *FolderSearchConfig) SetOffset(offset uint64) {
+	fs.Offset = &offset
 }
 
 func (fs *FolderSearchConfig) CheckSizeNotFits(size int64) bool {

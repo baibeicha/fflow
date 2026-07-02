@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -21,6 +22,8 @@ var (
 	copyBlacklist  []string
 	copyMinSize    string
 	copyMaxSize    string
+	copyLimit      string
+	copyOffset     string
 )
 
 var copyCmd = &cobra.Command{
@@ -38,12 +41,13 @@ func init() {
 	copyCmd.Flags().StringSliceVarP(&copyPaths, "path", "p", defaultPaths, locale.T("flags.path"))
 	copyCmd.Flags().StringSliceVarP(&copyDests, "dest", "d", []string{"."}, locale.T("flags.dest"))
 	copyCmd.Flags().BoolVarP(&copyRewrite, "rewrite", "w", false, locale.T("flags.rewrite"))
-
 	copyCmd.Flags().BoolVarP(&copyRecursive, "recursive", "r", false, locale.T("flags.recursive"))
 	copyCmd.Flags().StringSliceVarP(&copyExtensions, "extensions", "e", nil, locale.T("flags.extensions"))
 	copyCmd.Flags().StringSliceVar(&copyBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	copyCmd.Flags().StringVar(&copyMinSize, "min-size", "", locale.T("flags.min_size"))
 	copyCmd.Flags().StringVar(&copyMaxSize, "max-size", "", locale.T("flags.max_size"))
+	copyCmd.Flags().StringVar(&copyLimit, "limit", "", locale.T("flags.limit"))
+	copyCmd.Flags().StringVar(&copyOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runCopy(cmd *cobra.Command, args []string) (err error) {
@@ -77,9 +81,22 @@ func runCopy(cmd *cobra.Command, args []string) (err error) {
 		size, unit := parseSize(copyMaxSize)
 		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
 	}
+	if copyLimit != "" {
+		limit, err := strconv.ParseUint(copyLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if copyOffset != "" {
+		offset, err := strconv.ParseUint(copyOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 
 	fsc.CollectDirs = false
 	items, err := files.CollectFiles(fsc)
+	items, amount := files.Paginate(items, fsc)
 	spinner.Finish()
 
 	if err != nil {
@@ -91,7 +108,7 @@ func runCopy(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	start = time.Now()
-	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.copying"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.copying"))
 	suffix := locale.T("messages.labels.copy_suffix")
 
 	_, stats, err := files.TransferFiles(items, copyDests, false, copyRewrite, suffix, func() {

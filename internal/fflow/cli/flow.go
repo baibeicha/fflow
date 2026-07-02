@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,8 @@ var (
 	flowYamlFile   string
 	flowInlineCmd  string
 	flowLoadEnv    bool
+	flowLimit      string
+	flowOffset     string
 )
 
 var flowCmd = &cobra.Command{
@@ -42,10 +45,11 @@ func init() {
 	flowCmd.Flags().StringSliceVar(&flowBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	flowCmd.Flags().StringVar(&flowMinSize, "min-size", "", locale.T("flags.min_size"))
 	flowCmd.Flags().StringVar(&flowMaxSize, "max-size", "", locale.T("flags.max_size"))
-
 	flowCmd.Flags().StringVarP(&flowYamlFile, "file", "f", "", locale.T("flags.flow_file"))
 	flowCmd.Flags().StringVarP(&flowInlineCmd, "cmd", "c", "", locale.T("flags.flow_cmd"))
 	flowCmd.Flags().BoolVar(&flowLoadEnv, "env", false, locale.T("flags.flow_env"))
+	flowCmd.Flags().StringVarP(&flowLimit, "limit", "l", "", locale.T("flags.flow_limit"))
+	flowCmd.Flags().StringVarP(&flowOffset, "offset", "o", "", locale.T("flags.flow_offset"))
 }
 
 func runFlow(cmd *cobra.Command, args []string) (err error) {
@@ -78,12 +82,25 @@ func runFlow(cmd *cobra.Command, args []string) (err error) {
 		s, u := parseSize(flowMaxSize)
 		fsc.SetMaxSize(files.SizeFromUnit(s, u))
 	}
+	if flowLimit != "" {
+		limit, err := strconv.ParseUint(flowLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if flowOffset != "" {
+		offset, err := strconv.ParseUint(flowOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 	fsc.CollectDirs = false
 
 	start = time.Now()
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	items, err := files.CollectFiles(fsc)
+	items, _ = files.Paginate(items, fsc)
 	spinner.Finish()
 
 	if err != nil {

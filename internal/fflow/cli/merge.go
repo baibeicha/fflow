@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -29,6 +30,8 @@ var (
 	mergeCountWords  bool
 	mergeCountChars  bool
 	mergeCountNoSpc  bool
+	mergeLimit       string
+	mergeOffset      string
 )
 
 var mergeCmd = &cobra.Command{
@@ -56,6 +59,8 @@ func init() {
 	mergeCmd.Flags().BoolVar(&mergeCountWords, "count-words", false, locale.T("flags.count_words"))
 	mergeCmd.Flags().BoolVar(&mergeCountChars, "count-chars", false, locale.T("flags.count_chars"))
 	mergeCmd.Flags().BoolVar(&mergeCountNoSpc, "count-chars-no-space", false, locale.T("flags.count_chars_no_space"))
+	mergeCmd.Flags().StringVar(&mergeLimit, "limit", "", locale.T("flags.limit"))
+	mergeCmd.Flags().StringVar(&mergeOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runMerge(cmd *cobra.Command, args []string) (err error) {
@@ -87,6 +92,20 @@ func runMerge(cmd *cobra.Command, args []string) (err error) {
 		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
 	}
 
+	if mergeLimit != "" {
+		limit, err := strconv.ParseUint(mergeLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+
+	if mergeOffset != "" {
+		offset, err := strconv.ParseUint(mergeOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
+
 	mergeCfg := &files.MergeConfig{
 		IncludeFilePath: mergeIncludePath,
 		IncludeFileName: mergeIncludeName,
@@ -108,6 +127,7 @@ func runMerge(cmd *cobra.Command, args []string) (err error) {
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	fileInfos, err := files.CollectFiles(fsc)
+	fileInfos, amount := files.Paginate(fileInfos, fsc)
 	spinner.Finish()
 
 	if err != nil {
@@ -121,7 +141,7 @@ func runMerge(cmd *cobra.Command, args []string) (err error) {
 
 	sorter.SortFiles(fileInfos)
 
-	bar := ui.NewProgressBar(int64(len(fileInfos)), fmt.Sprintf(locale.T("messages.progress.merging"), mode))
+	bar := ui.NewProgressBar(int64(amount), fmt.Sprintf(locale.T("messages.progress.merging"), mode))
 
 	stats, err := files.MergeFiles(fileInfos, mergeOutput, mergeCfg, mergeFast, func() {
 		bar.Add(1)

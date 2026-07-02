@@ -28,6 +28,8 @@ var (
 	pdfMinSize    string
 	pdfMaxSize    string
 	pdfSortBy     []string
+	pdfLimit      string
+	pdfOffset     string
 
 	pdfOrientation string
 	pdfPageSize    string
@@ -80,6 +82,8 @@ func init() {
 	pdfCmd.Flags().StringVar(&pdfMinSize, "min-size", "", locale.T("flags.min_size"))
 	pdfCmd.Flags().StringVar(&pdfMaxSize, "max-size", "", locale.T("flags.max_size"))
 	pdfCmd.Flags().StringSliceVar(&pdfSortBy, "sort-by", []string{"name:asc"}, locale.T("flags.sort_by"))
+	pdfCmd.Flags().StringVar(&pdfLimit, "limit", "", locale.T("flags.limit"))
+	pdfCmd.Flags().StringVar(&pdfOffset, "offset", "", locale.T("flags.offset"))
 
 	pdfCmd.Flags().StringVar(&pdfOrientation, "orientation", "", locale.T("flags.orientation"))
 	pdfCmd.Flags().StringVar(&pdfPageSize, "page-size", "", locale.T("flags.page_size"))
@@ -156,6 +160,18 @@ func runPDF(cmd *cobra.Command, args []string) (err error) {
 		size, unit := parseSize(pdfMaxSize)
 		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
 	}
+	if pdfLimit != "" {
+		limit, err := strconv.ParseUint(pdfLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if pdfOffset != "" {
+		offset, err := strconv.ParseUint(pdfOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 
 	sorter := buildSorter(pdfSortBy)
 
@@ -163,6 +179,7 @@ func runPDF(cmd *cobra.Command, args []string) (err error) {
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	fileInfos, err := files.CollectFiles(fsc)
+	fileInfos, amount := files.Paginate(fileInfos, fsc)
 	spinner.Finish()
 
 	if err != nil {
@@ -176,7 +193,7 @@ func runPDF(cmd *cobra.Command, args []string) (err error) {
 
 	sorter.SortFiles(fileInfos)
 
-	bar := ui.NewProgressBar(int64(len(fileInfos)), locale.T("messages.progress.generating_pdf"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.generating_pdf"))
 
 	err = pdf.GeneratePDF(fileInfos, presetCfg, func() {
 		bar.Add(1)

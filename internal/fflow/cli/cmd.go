@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -18,6 +19,8 @@ var (
 	cmdExtensions []string
 	cmdBlacklist  []string
 	cmdExec       string
+	cmdLimit      string
+	cmdOffset     string
 )
 
 var cmdExecCmd = &cobra.Command{
@@ -34,6 +37,8 @@ func init() {
 	cmdExecCmd.Flags().StringSliceVarP(&cmdExtensions, "extensions", "e", nil, locale.T("flags.extensions"))
 	cmdExecCmd.Flags().StringSliceVar(&cmdBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	cmdExecCmd.Flags().StringVar(&cmdExec, "exec", "", locale.T("flags.exec"))
+	cmdExecCmd.Flags().StringVar(&cmdLimit, "limit", "", locale.T("flags.limit"))
+	cmdExecCmd.Flags().StringVar(&cmdOffset, "offset", "", locale.T("flags.offset"))
 	cmdExecCmd.MarkFlagRequired("exec")
 }
 
@@ -59,10 +64,26 @@ func runCmd(cmd *cobra.Command, args []string) (err error) {
 	}
 	fsc.CollectDirs = false
 
+	if cmdLimit != "" {
+		limit, err := strconv.ParseUint(cmdLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+
+	if cmdOffset != "" {
+		offset, err := strconv.ParseUint(cmdOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
+
 	start = time.Now()
 
 	ui.Title(locale.T("commands.cmd.short"))
 	items, err := files.CollectFiles(fsc)
+	items, amount := files.Paginate(items, fsc)
+
 	if err != nil {
 		return fmt.Errorf(locale.T("messages.errors.collecting_files"), err)
 	}
@@ -71,7 +92,7 @@ func runCmd(cmd *cobra.Command, args []string) (err error) {
 		return nil
 	}
 
-	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.executing"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.executing"))
 
 	_, stats, err := files.ExecuteCommandOnFiles(items, cmdExec, func() { bar.Add(1) })
 	bar.Finish()

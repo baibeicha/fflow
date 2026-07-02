@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -19,6 +20,8 @@ var (
 	delBlacklist  []string
 	delMinSize    string
 	delMaxSize    string
+	delLimit      string
+	delOffset     string
 )
 
 var deleteCmd = &cobra.Command{
@@ -36,6 +39,8 @@ func init() {
 	deleteCmd.Flags().StringSliceVar(&delBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	deleteCmd.Flags().StringVar(&delMinSize, "min-size", "", locale.T("flags.min_size"))
 	deleteCmd.Flags().StringVar(&delMaxSize, "max-size", "", locale.T("flags.max_size"))
+	deleteCmd.Flags().StringVar(&delLimit, "limit", "", locale.T("flags.limit"))
+	deleteCmd.Flags().StringVar(&delOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runDelete(cmd *cobra.Command, args []string) (err error) {
@@ -66,12 +71,26 @@ func runDelete(cmd *cobra.Command, args []string) (err error) {
 		s, u := parseSize(delMaxSize)
 		fsc.SetMaxSize(files.SizeFromUnit(s, u))
 	}
+	if delLimit != "" {
+		limit, err := strconv.ParseUint(delLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if delOffset != "" {
+		offset, err := strconv.ParseUint(delOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 	fsc.CollectDirs = false
 
 	start = time.Now()
 
 	ui.Title(locale.T("commands.delete.short"))
 	items, err := files.CollectFiles(fsc)
+	items, amount := files.Paginate(items, fsc)
+
 	if err != nil {
 		return fmt.Errorf(locale.T("messages.errors.collecting_files"), err)
 	}
@@ -80,7 +99,7 @@ func runDelete(cmd *cobra.Command, args []string) (err error) {
 		return nil
 	}
 
-	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.deleting"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.deleting"))
 
 	_, stats, err := files.DeleteFiles(items, func() { bar.Add(1) })
 	bar.Finish()

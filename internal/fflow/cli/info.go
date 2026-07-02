@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -25,6 +26,8 @@ var (
 	infoMinSize    string
 	infoMaxSize    string
 	infoSortBy     []string
+	infoLimit      string
+	infoOffset     string
 )
 
 var infoCmd = &cobra.Command{
@@ -37,16 +40,15 @@ var infoCmd = &cobra.Command{
 }
 
 func init() {
-	infoBasePath := make([]string, 0)
-	infoBasePath = append(infoBasePath, ".")
-
-	infoCmd.Flags().StringSliceVarP(&infoPaths, "path", "p", infoBasePath, locale.T("flags.path"))
+	infoCmd.Flags().StringSliceVarP(&infoPaths, "path", "p", []string{"."}, locale.T("flags.path"))
 	infoCmd.Flags().BoolVarP(&infoRecursive, "recursive", "r", false, locale.T("flags.recursive"))
 	infoCmd.Flags().StringSliceVarP(&infoExtensions, "extensions", "e", nil, locale.T("flags.extensions"))
 	infoCmd.Flags().StringSliceVar(&infoBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	infoCmd.Flags().StringVar(&infoMinSize, "min-size", "", locale.T("flags.min_size"))
 	infoCmd.Flags().StringVar(&infoMaxSize, "max-size", "", locale.T("flags.max_size"))
 	infoCmd.Flags().StringSliceVar(&infoSortBy, "sort-by", []string{"name:asc"}, locale.T("flags.sort_by"))
+	infoCmd.Flags().StringVar(&infoLimit, "limit", "", locale.T("flags.limit"))
+	infoCmd.Flags().StringVar(&infoOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runInfo(cmd *cobra.Command, args []string) (err error) {
@@ -89,8 +91,21 @@ func runInfo(cmd *cobra.Command, args []string) (err error) {
 		size, unit := parseSize(infoMaxSize)
 		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
 	}
+	if infoLimit != "" {
+		limit, err := strconv.ParseUint(infoLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if infoOffset != "" {
+		offset, err := strconv.ParseUint(infoOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 
 	items, err := files.CollectFiles(fsc)
+	items, _ = files.Paginate(items, fsc)
 	spinner.Finish()
 
 	if err != nil {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -18,6 +19,8 @@ var (
 	extExtensions []string
 	extBlacklist  []string
 	extTo         string
+	extLimit      string
+	extOffset     string
 )
 
 var extCmd = &cobra.Command{
@@ -34,6 +37,8 @@ func init() {
 	extCmd.Flags().StringSliceVarP(&extExtensions, "extensions", "e", nil, locale.T("flags.extensions"))
 	extCmd.Flags().StringSliceVar(&extBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	extCmd.Flags().StringVar(&extTo, "to", "", locale.T("flags.to"))
+	extCmd.Flags().StringVar(&extLimit, "limit", "", locale.T("flags.limit"))
+	extCmd.Flags().StringVar(&extOffset, "offset", "", locale.T("flags.offset"))
 	extCmd.MarkFlagRequired("to")
 }
 
@@ -57,12 +62,26 @@ func runExt(cmd *cobra.Command, args []string) (err error) {
 	if len(extBlacklist) > 0 {
 		fsc.AddToBlackList(extBlacklist...)
 	}
+	if extLimit != "" {
+		limit, err := strconv.ParseUint(extLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if extOffset != "" {
+		offset, err := strconv.ParseUint(extOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 	fsc.CollectDirs = false
 
 	start = time.Now()
 
 	ui.Title(locale.T("commands.ext.short"))
 	items, err := files.CollectFiles(fsc)
+	items, amount := files.Paginate(items, fsc)
+
 	if err != nil {
 		return fmt.Errorf(locale.T("messages.errors.collecting_files"), err)
 	}
@@ -71,7 +90,7 @@ func runExt(cmd *cobra.Command, args []string) (err error) {
 		return nil
 	}
 
-	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.renaming"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.renaming"))
 
 	_, stats, err := files.ChangeExtension(items, extTo, func() { bar.Add(1) })
 	bar.Finish()

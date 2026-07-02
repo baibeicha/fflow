@@ -26,6 +26,8 @@ var (
 	statsCountChars bool
 	statsCountNoSpc bool
 	statsSortBy     []string
+	statsLimit      string
+	statsOffset     string
 )
 
 var statsCmd = &cobra.Command{
@@ -48,6 +50,8 @@ func init() {
 	statsCmd.Flags().BoolVar(&statsCountChars, "count-chars", false, locale.T("flags.count_chars"))
 	statsCmd.Flags().BoolVar(&statsCountNoSpc, "count-chars-no-space", false, locale.T("flags.count_chars_no_space"))
 	statsCmd.Flags().StringSliceVar(&statsSortBy, "sort-by", []string{"name:asc"}, locale.T("flags.sort_by"))
+	statsCmd.Flags().StringVar(&statsLimit, "limit", "", locale.T("flags.limit"))
+	statsCmd.Flags().StringVar(&statsOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runStats(cmd *cobra.Command, args []string) (err error) {
@@ -78,6 +82,18 @@ func runStats(cmd *cobra.Command, args []string) (err error) {
 		size, unit := parseSize(statsMaxSize)
 		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
 	}
+	if statsLimit != "" {
+		limit, err := strconv.ParseUint(statsLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if statsOffset != "" {
+		offset, err := strconv.ParseUint(statsOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 
 	statsCfg := &files.StatsConfig{
 		CountLines:      statsCountLines,
@@ -92,6 +108,7 @@ func runStats(cmd *cobra.Command, args []string) (err error) {
 
 	spinner := ui.NewSpinner(locale.T("messages.progress.collecting"))
 	fileInfos, err := files.CollectFiles(fsc)
+	fileInfos, amount := files.Paginate(fileInfos, fsc)
 	spinner.Finish()
 
 	if err != nil {
@@ -105,7 +122,7 @@ func runStats(cmd *cobra.Command, args []string) (err error) {
 
 	sorter.SortFiles(fileInfos)
 
-	bar := ui.NewProgressBar(int64(len(fileInfos)), locale.T("messages.progress.calculating_stats"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.calculating_stats"))
 
 	stats, err := files.CalculateStats(fileInfos, statsCfg, func() {
 		bar.Add(1)

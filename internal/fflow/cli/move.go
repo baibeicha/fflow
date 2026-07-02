@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -21,6 +22,8 @@ var (
 	moveBlacklist  []string
 	moveMinSize    string
 	moveMaxSize    string
+	moveLimit      string
+	moveOffset     string
 )
 
 var moveCmd = &cobra.Command{
@@ -33,17 +36,16 @@ var moveCmd = &cobra.Command{
 }
 
 func init() {
-	defaultPaths := []string{"."}
-
-	moveCmd.Flags().StringSliceVarP(&movePaths, "path", "p", defaultPaths, locale.T("flags.path"))
+	moveCmd.Flags().StringSliceVarP(&movePaths, "path", "p", []string{"."}, locale.T("flags.path"))
 	moveCmd.Flags().StringSliceVarP(&moveDests, "dest", "d", []string{"."}, locale.T("flags.dest"))
 	moveCmd.Flags().BoolVarP(&moveRewrite, "rewrite", "w", false, locale.T("flags.rewrite"))
-
 	moveCmd.Flags().BoolVarP(&moveRecursive, "recursive", "r", false, locale.T("flags.recursive"))
 	moveCmd.Flags().StringSliceVarP(&moveExtensions, "extensions", "e", nil, locale.T("flags.extensions"))
 	moveCmd.Flags().StringSliceVar(&moveBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	moveCmd.Flags().StringVar(&moveMinSize, "min-size", "", locale.T("flags.min_size"))
 	moveCmd.Flags().StringVar(&moveMaxSize, "max-size", "", locale.T("flags.max_size"))
+	moveCmd.Flags().StringVar(&moveLimit, "limit", "", locale.T("flags.limit"))
+	moveCmd.Flags().StringVar(&moveOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runMove(cmd *cobra.Command, args []string) (err error) {
@@ -77,9 +79,22 @@ func runMove(cmd *cobra.Command, args []string) (err error) {
 		size, unit := parseSize(moveMaxSize)
 		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
 	}
+	if moveLimit != "" {
+		limit, err := strconv.ParseUint(moveLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if moveOffset != "" {
+		offset, err := strconv.ParseUint(moveOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 
 	fsc.CollectDirs = false
 	items, err := files.CollectFiles(fsc)
+	items, amount := files.Paginate(items, fsc)
 	spinner.Finish()
 
 	if err != nil {
@@ -91,7 +106,7 @@ func runMove(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	start = time.Now()
-	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.moving"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.moving"))
 	suffix := locale.T("messages.labels.copy_suffix")
 
 	_, stats, err := files.TransferFiles(items, moveDests, true, moveRewrite, suffix, func() {

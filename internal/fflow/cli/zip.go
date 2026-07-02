@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -18,6 +19,10 @@ var (
 	zipExtensions []string
 	zipBlacklist  []string
 	zipOutput     string
+	zipMinSize    string
+	zipMaxSize    string
+	zipLimit      string
+	zipOffset     string
 )
 
 var zipCmd = &cobra.Command{
@@ -34,6 +39,10 @@ func init() {
 	zipCmd.Flags().StringSliceVarP(&zipExtensions, "extensions", "e", nil, locale.T("flags.extensions"))
 	zipCmd.Flags().StringSliceVar(&zipBlacklist, "blacklist", nil, locale.T("flags.blacklist"))
 	zipCmd.Flags().StringVarP(&zipOutput, "output", "o", "archive.zip", locale.T("flags.output"))
+	zipCmd.Flags().StringVar(&zipMinSize, "min-size", "", locale.T("flags.min_size"))
+	zipCmd.Flags().StringVar(&zipMaxSize, "max-size", "", locale.T("flags.max_size"))
+	zipCmd.Flags().StringVar(&zipLimit, "limit", "", locale.T("flags.limit"))
+	zipCmd.Flags().StringVar(&zipOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runZip(cmd *cobra.Command, args []string) (err error) {
@@ -56,12 +65,34 @@ func runZip(cmd *cobra.Command, args []string) (err error) {
 	if len(zipBlacklist) > 0 {
 		fsc.AddToBlackList(zipBlacklist...)
 	}
+	if zipMinSize != "" {
+		size, unit := parseSize(zipMinSize)
+		fsc.SetMinSize(files.SizeFromUnit(size, unit))
+	}
+	if zipMaxSize != "" {
+		size, unit := parseSize(zipMaxSize)
+		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
+	}
+	if zipLimit != "" {
+		limit, err := strconv.ParseUint(zipLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+	if zipOffset != "" {
+		offset, err := strconv.ParseUint(zipOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
 	fsc.CollectDirs = false
 
 	start = time.Now()
 
 	ui.Title(locale.T("commands.zip.short"))
 	items, err := files.CollectFiles(fsc)
+	items, amount := files.Paginate(items, fsc)
+
 	if err != nil {
 		return fmt.Errorf(locale.T("messages.errors.collecting_files"), err)
 	}
@@ -70,7 +101,7 @@ func runZip(cmd *cobra.Command, args []string) (err error) {
 		return nil
 	}
 
-	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.zipping"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.zipping"))
 
 	_, stats, err := files.CreateZip(items, zipOutput, func() { bar.Add(1) })
 	bar.Finish()

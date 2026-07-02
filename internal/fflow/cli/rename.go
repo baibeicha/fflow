@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/baibeicha/fflow/pkg/telemetry"
@@ -21,6 +22,10 @@ var (
 	renReplace    string
 	renPrefix     string
 	renSuffix     string
+	renMinSize    string
+	renMaxSize    string
+	renLimit      string
+	renOffset     string
 )
 
 var renameCmd = &cobra.Command{
@@ -40,6 +45,10 @@ func init() {
 	renameCmd.Flags().StringVar(&renReplace, "replace", "", locale.T("flags.replace"))
 	renameCmd.Flags().StringVar(&renPrefix, "prefix", "", locale.T("flags.prefix"))
 	renameCmd.Flags().StringVar(&renSuffix, "suffix", "", locale.T("flags.suffix"))
+	renameCmd.Flags().StringVar(&renMinSize, "min-size", "", locale.T("flags.min_size"))
+	renameCmd.Flags().StringVar(&renMaxSize, "max-size", "", locale.T("flags.max_size"))
+	renameCmd.Flags().StringVar(&renLimit, "limit", "", locale.T("flags.limit"))
+	renameCmd.Flags().StringVar(&renOffset, "offset", "", locale.T("flags.offset"))
 }
 
 func runRename(cmd *cobra.Command, args []string) (err error) {
@@ -62,10 +71,36 @@ func runRename(cmd *cobra.Command, args []string) (err error) {
 	if len(renBlacklist) > 0 {
 		fsc.AddToBlackList(renBlacklist...)
 	}
+
+	if renMinSize != "" {
+		size, unit := parseSize(renMinSize)
+		fsc.SetMinSize(files.SizeFromUnit(size, unit))
+	}
+	if renMaxSize != "" {
+		size, unit := parseSize(renMaxSize)
+		fsc.SetMaxSize(files.SizeFromUnit(size, unit))
+	}
+
+	if renLimit != "" {
+		limit, err := strconv.ParseUint(renLimit, 10, 64)
+		if err != nil {
+			fsc.SetLimit(limit)
+		}
+	}
+
+	if renOffset != "" {
+		offset, err := strconv.ParseUint(renOffset, 10, 64)
+		if err != nil {
+			fsc.SetLimit(offset)
+		}
+	}
+
 	fsc.CollectDirs = false
 
 	ui.Title(locale.T("commands.rename.short"))
 	items, err := files.CollectFiles(fsc)
+	items, amount := files.Paginate(items, fsc)
+
 	if err != nil {
 		return fmt.Errorf(locale.T("messages.errors.collecting_files"), err)
 	}
@@ -75,7 +110,7 @@ func runRename(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	start = time.Now()
-	bar := ui.NewProgressBar(int64(len(items)), locale.T("messages.progress.renaming"))
+	bar := ui.NewProgressBar(int64(amount), locale.T("messages.progress.renaming"))
 
 	_, stats, err := files.RenameFiles(items, renSearch, renReplace, renPrefix, renSuffix, func() { bar.Add(1) })
 	bar.Finish()
